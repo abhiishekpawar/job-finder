@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SearchRunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum JobSource {
+  INDEED
+  LINKEDIN
+  NAUKRI
+}
+
+model User {
+  id         String              @id @default(cuid())
+  email      String              @unique
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  schedules  JobSearchSchedule[]
+  savedJobs  SavedJob[]
+}
+
+model JobSearchSchedule {
+  id               String           @id @default(cuid())
+  userId           String
+  name             String
+  keyword          String
+  location         String
+  timezone         String           @default("Asia/Kolkata")
+  timeOfDay        String
+  maxResults       Int              @default(25)
+  enabled          Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  lastTriggeredAt  DateTime?
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs             JobSearchRun[]
+  jobResults       JobResult[]
+
+  @@index([userId, enabled])
+}
+
+model JobSearchRun {
+  id           String               @id @default(cuid())
+  scheduleId   String
+  status       SearchRunStatus      @default(PENDING)
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  errorMessage String?
+  createdAt    DateTime             @default(now())
+  schedule     JobSearchSchedule    @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  matches      JobSearchRunResult[]
+
+  @@index([scheduleId, createdAt(sort: Desc)])
+}
+
+model JobResult {
+  id            String               @id @default(cuid())
+  scheduleId    String
+  source        JobSource
+  sourceJobId   String?
+  title         String
+  company       String
+  location      String
+  url           String
+  salary        String?
+  postedAt      DateTime?
+  description   String?
+  firstSeenAt   DateTime             @default(now())
+  lastSeenAt    DateTime             @default(now())
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  schedule      JobSearchSchedule    @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  runs          JobSearchRunResult[]
+  savedByUsers  SavedJob[]
+
+  @@unique([scheduleId, source, sourceJobId])
+  @@unique([scheduleId, source, url])
+  @@index([scheduleId, firstSeenAt(sort: Desc)])
+}
+
+model JobSearchRunResult {
+  id          String       @id @default(cuid())
+  runId       String
+  jobResultId String
+  isNew       Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  run         JobSearchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  jobResult   JobResult    @relation(fields: [jobResultId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, jobResultId])
+  @@index([runId, isNew])
+}
+
+model SavedJob {
+  id          String    @id @default(cuid())
+  userId      String
+  jobResultId String
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobResult   JobResult @relation(fields: [jobResultId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobResultId])
+}

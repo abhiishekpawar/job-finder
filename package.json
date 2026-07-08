@@ -1,0 +1,24 @@
+{
+  "name": "job-hunter",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/web",
+    "apps/worker"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:worker": "npm --workspace apps/worker run dev",
+    "build": "npm run build:web && npm run build:worker",
+    "build:web": "npm --workspace apps/web run build",
+    "build:worker": "npm --workspace apps/worker run build",
+    "start:web": "npm --workspace apps/web run start",
+    "lint": "npm --workspace apps/web run lint && npm --workspace apps/worker run lint",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate dev",
+    "worker:once": "npm --workspace apps/worker run once"
+  }
+}

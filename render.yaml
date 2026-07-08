@@ -1,0 +1,32 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: job-hunter
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: npm install && npm run build:web
+    startCommand: npm run start:web
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: APIFY_RUN_TIMEOUT_MS
+        value: "60000"
+      - key: DEFAULT_RESULTS_PER_SOURCE
+        value: "25"
+      - key: APIFY_INDEED_ACTOR_ID
+        value: misceres/indeed-scraper
+      - key: APIFY_NAUKRI_ACTOR_ID
+        value: jungle_synthesizer/naukri-com-scraper
+      - key: APIFY_OTHERS_ACTOR_ID
+        value: dp862/india-jobs-suite
+      - key: APIFY_SHINE_ACTOR_ID
+        value: automation-lab/shine-jobs-scraper
+      - key: APIFY_FOUNDIT_ACTOR_ID
+        value: easyapi/foundit-jobs-scraper
+      - key: APIFY_TOKEN
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
