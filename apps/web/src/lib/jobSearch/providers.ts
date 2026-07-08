@@ -42,7 +42,7 @@ export async function searchIndeed(req: SearchRequest): Promise<SearchJob[]> {
   };
 
   log("Indeed provider input", input);
-  const items = await runActor<Record<string, unknown>>(actorId, input);
+  const items = await runActor<Record<string, unknown>>(actorId, input, req.token);
 
   const mapped = mapJobItems(items, "INDEED", {
     sourceJobId: ["jobId", "id"],
@@ -103,7 +103,7 @@ export async function searchLinkedIn(req: SearchRequest): Promise<SearchJob[]> {
   } catch (guestErr) {
     const guestMessage = guestErr instanceof Error ? guestErr.message : String(guestErr);
     log("LinkedIn guest API failed, falling back to Apify", { guestMessage });
-    const { items, actorId } = await runActorWithFallback<Record<string, unknown>>(apifyAttempts);
+    const { items, actorId } = await runActorWithFallback<Record<string, unknown>>(apifyAttempts, req.token);
     const mapped = mapJobItems(items, "LINKEDIN", {
       sourceJobId: ["jobId", "id"],
       title: ["title", "jobTitle"],
@@ -169,7 +169,7 @@ export async function searchNaukri(req: SearchRequest): Promise<SearchJob[]> {
   ]);
 
   log("Naukri provider input", { attempts: attempts.map((a) => a.actorId) });
-  const { items, actorId } = await runActorWithFallback<Record<string, unknown>>(attempts);
+  const { items, actorId } = await runActorWithFallback<Record<string, unknown>>(attempts, req.token);
 
   const mapped = mapJobItems(items, "NAUKRI", {
     sourceJobId: ["jobId", "id"],

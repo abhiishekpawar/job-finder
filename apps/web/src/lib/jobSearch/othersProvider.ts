@@ -17,7 +17,8 @@ async function searchShine(req: SearchRequest): Promise<SearchJob[]> {
       location,
       maxItems: req.maxResults,
       maxPages: Math.max(1, Math.ceil(req.maxResults / 20))
-    }
+    },
+    req.token
   );
 
   return mapJobItems(items, "SHINE", {
@@ -41,7 +42,8 @@ async function searchFoundit(req: SearchRequest): Promise<SearchJob[]> {
     {
       searchUrls: [searchUrl],
       maxItems: req.maxResults
-    }
+    },
+    req.token
   );
 
   return mapJobItems(items, "FOUNDIT", {
@@ -75,7 +77,7 @@ export async function searchOthers(req: SearchRequest): Promise<SearchJob[]> {
   log("Others provider input", { location, maxResults: req.maxResults });
 
   try {
-    const { items, actorId } = await runActorWithFallback<Record<string, unknown>>(suiteAttempts);
+    const { items, actorId } = await runActorWithFallback<Record<string, unknown>>(suiteAttempts, req.token);
     const mapped = dedupeJobs(mapOtherBoardItems(items));
     log("Others provider mapped (suite)", { actorId, raw: items.length, mapped: mapped.length });
     if (mapped.length > 0) return mapped;

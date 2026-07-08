@@ -21,9 +21,16 @@ export async function POST(request: Request) {
   const payload = searchSchema.parse(await request.json());
   const { searchReq, debug } = buildSearchRequest(payload);
 
-  log("POST /api/search/stream received", payload);
+  log("POST /api/search/stream received", {
+    skills: payload.skills,
+    experienceYears: payload.experienceYears,
+    location: payload.location,
+    maxResults: payload.maxResults,
+    hasToken: Boolean(payload.token?.trim() || process.env.APIFY_TOKEN)
+  });
   log("Env check", {
-    hasApifyToken: Boolean(process.env.APIFY_TOKEN),
+    hasEnvApifyToken: Boolean(process.env.APIFY_TOKEN),
+    hasRequestToken: Boolean(payload.token?.trim()),
     timeoutMs: process.env.APIFY_RUN_TIMEOUT_MS ?? 30_000
   });
 

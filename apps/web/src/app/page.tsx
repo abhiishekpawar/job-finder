@@ -71,6 +71,7 @@ export default function HomePage() {
   const [experienceYears, setExperienceYears] = useState<number>(3);
   const [location, setLocation] = useState("Bengaluru, India");
   const [maxResults, setMaxResults] = useState<number>(10);
+  const [token, setToken] = useState("");
 
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,13 +118,19 @@ export default function HomePage() {
     const abortController = new AbortController();
     abortRef.current = abortController;
 
+    const trimmedToken = token.trim();
+    if (!trimmedToken) {
+      setError("Enter your token in the token field.");
+      return;
+    }
+
     setError(null);
     setIsSearching(true);
     setJobsByProvider(emptyJobsByProvider());
     resetProviderState();
 
-    const body = { skills, experienceYears, location, keyword, maxResults };
-    console.log("[job-search] UI stream start", body);
+    const body = { skills, experienceYears, location, keyword, maxResults, token: trimmedToken };
+    console.log("[job-search] UI stream start", { skills, experienceYears, location, keyword, maxResults });
     const startedAt = Date.now();
 
     try {
@@ -207,6 +214,22 @@ export default function HomePage() {
         </p>
 
         <form onSubmit={onSearch} className="space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300" htmlFor="token">
+              token
+            </label>
+            <input
+              id="token"
+              name="token"
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              autoComplete="off"
+              required
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none"
+            />
+          </div>
+
           <div>
             <label className="mb-2 block text-sm text-slate-300" htmlFor="skills">
               Skills / keyword

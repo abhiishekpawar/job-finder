@@ -10,7 +10,13 @@ export async function POST(request: Request) {
   const requestStarted = Date.now();
   const payload = searchSchema.parse(await request.json());
 
-  log("POST /api/search received", payload);
+  log("POST /api/search received", {
+    skills: payload.skills,
+    experienceYears: payload.experienceYears,
+    location: payload.location,
+    maxResults: payload.maxResults,
+    hasToken: Boolean(payload.token?.trim() || process.env.APIFY_TOKEN)
+  });
 
   const { searchReq, debug } = buildSearchRequest(payload);
   const providerSummary: Record<string, number> = {};

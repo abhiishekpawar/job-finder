@@ -4,18 +4,22 @@ type ApifyDatasetItem = Record<string, unknown>;
 
 const APIFY_BASE_URL = "https://api.apify.com/v2";
 
-function getRequiredEnv(name: string) {
-  const value = process.env[name];
+function resolveToken(token?: string): string {
+  const value = token?.trim() || process.env.APIFY_TOKEN?.trim();
   if (!value) {
-    throw new Error(`Missing required env var: ${name}`);
+    throw new Error("Missing token. Enter your token in the UI.");
   }
   return value;
 }
 
-export async function runActor<T extends ApifyDatasetItem>(actorId: string, input: Record<string, unknown>) {
-  const token = getRequiredEnv("APIFY_TOKEN");
+export async function runActor<T extends ApifyDatasetItem>(
+  actorId: string,
+  input: Record<string, unknown>,
+  token?: string
+) {
+  const resolvedToken = resolveToken(token);
   const url = `${APIFY_BASE_URL}/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${encodeURIComponent(
-    token
+    resolvedToken
   )}`;
 
   const timeoutMs = Number(process.env.APIFY_RUN_TIMEOUT_MS ?? 60_000);
@@ -42,7 +46,7 @@ export async function runActor<T extends ApifyDatasetItem>(actorId: string, inpu
   } catch (err) {
     const ms = Date.now() - startedAt;
     if (err instanceof Error && err.name === "AbortError") {
-      throw new Error(`Apify actor timed out (${actorId}) after ${timeoutMs}ms`);
+      throw new Error(`Job source timed out (${actorId}) after ${timeoutMs}ms`);
     }
     logError(`Apify fetch error (${actorId})`, { ms, err });
     throw err;
@@ -56,7 +60,7 @@ export async function runActor<T extends ApifyDatasetItem>(actorId: string, inpu
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
     logError(`Apify HTTP error (${actorId})`, { status: response.status, body: errorText.slice(0, 500) });
-    throw new Error(`Apify actor failed (${actorId}): ${response.status} ${errorText}`);
+    throw new Error(`Job source failed (${actorId}): ${response.status} ${errorText}`);
   }
 
   const items = (await response.json()) as T[];
@@ -70,13 +74,14 @@ export async function runActor<T extends ApifyDatasetItem>(actorId: string, inpu
 }
 
 export async function runActorWithFallback<T extends ApifyDatasetItem>(
-  attempts: Array<{ actorId: string; input: Record<string, unknown> }>
+  attempts: Array<{ actorId: string; input: Record<string, unknown> }>,
+  token?: string
 ): Promise<{ items: T[]; actorId: string }> {
   const errors: string[] = [];
 
   for (const attempt of attempts) {
     try {
-      const items = await runActor<T>(attempt.actorId, attempt.input);
+      const items = await runActor<T>(attempt.actorId, attempt.input, token);
       return { items, actorId: attempt.actorId };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

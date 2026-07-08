@@ -6,7 +6,8 @@ export const searchSchema = z.object({
   experienceYears: z.number().int().min(0).max(50),
   location: z.string().min(1),
   keyword: z.string().optional(),
-  maxResults: z.number().int().min(5).max(100).optional()
+  maxResults: z.number().int().min(5).max(100).optional(),
+  token: z.string().min(1).optional()
 });
 
 export function buildSearchRequest(payload: z.infer<typeof searchSchema>): {
@@ -29,7 +30,8 @@ export function buildSearchRequest(payload: z.infer<typeof searchSchema>): {
       experienceYears: payload.experienceYears,
       location: payload.location,
       keyword,
-      maxResults
+      maxResults,
+      token: payload.token?.trim() || undefined
     },
     debug: {
       keyword,

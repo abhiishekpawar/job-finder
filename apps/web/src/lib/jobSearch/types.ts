@@ -35,6 +35,7 @@ export type SearchRequest = {
   location: string;
   keyword: string;
   maxResults: number;
+  token?: string;
 };
 
 export type SearchResponse = {
