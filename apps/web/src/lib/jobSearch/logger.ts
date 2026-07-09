@@ -1,11 +1,7 @@
 const PREFIX = "[job-search]";
 
-export function log(message: string, data?: unknown) {
-  if (data !== undefined) {
-    console.log(`${PREFIX} ${message}`, data);
-  } else {
-    console.log(`${PREFIX} ${message}`);
-  }
+export function log(_message: string, _data?: unknown) {
+  // Intentionally silent — use logError for failures.
 }
 
 export function logError(message: string, data?: unknown) {
@@ -17,14 +13,10 @@ export function logError(message: string, data?: unknown) {
 }
 
 export async function timed<T>(label: string, fn: () => Promise<T>): Promise<T> {
-  const start = Date.now();
-  log(`${label} started`);
   try {
-    const result = await fn();
-    log(`${label} finished`, { ms: Date.now() - start });
-    return result;
+    return await fn();
   } catch (err) {
-    logError(`${label} failed`, { ms: Date.now() - start, err });
+    logError(`${label} failed`, { err });
     throw err;
   }
 }

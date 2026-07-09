@@ -28,9 +28,22 @@ export default async function RootLayout({
               </Link>
             </div>
             <div className="flex items-center gap-4 text-sm">
-              <Link href="/" className="rounded-lg border border-white/10 px-3 py-2 text-slate-200 transition hover:border-cyan-400/50">
+              <a
+                href="/"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-white/10 px-3 py-2 text-slate-200 transition hover:border-cyan-400/50"
+              >
                 Search jobs
-              </Link>
+              </a>
+              <a
+                href="/resume-checker"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-emerald-400/40 px-3 py-2 text-emerald-200 transition hover:border-emerald-300/60"
+              >
+                Resume checker
+              </a>
             </div>
           </header>
           <main className="flex-1">{children}</main>

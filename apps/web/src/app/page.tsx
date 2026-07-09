@@ -1,10 +1,12 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { consumeSearchStream } from "@/lib/jobSearch/consumeSearchStream";
 import type { ProviderName } from "@/lib/jobSearch/streamEvents";
 import { SOURCE_LABELS, type SearchJob } from "@/lib/jobSearch/types";
+import { openResumeChecker } from "@/lib/resumeChecker/storage";
+import { TOKEN_STORAGE_KEY } from "@/lib/resumeChecker/types";
 
 type ProviderStatus = "idle" | "running" | "done" | "error";
 
@@ -64,12 +66,7 @@ function sortJobsByNewest(items: SearchJob[]) {
 
 function JobCard({ job, showSource }: { job: SearchJob; showSource?: boolean }) {
   return (
-    <a
-      href={job.url}
-      target="_blank"
-      rel="noreferrer"
-      className="block rounded-xl border border-white/10 bg-slate-950/60 p-3 transition hover:border-cyan-400/40"
-    >
+    <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 transition hover:border-cyan-400/40">
       {showSource ? (
         <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.12em] text-amber-200/80">
           {SOURCE_LABELS[job.source]}
@@ -84,7 +81,25 @@ function JobCard({ job, showSource }: { job: SearchJob; showSource?: boolean }) 
       </p>
       <p className="mt-1 text-xs text-slate-400">Posted: {formatPostedDate(job.postedAt)}</p>
       {job.salary ? <p className="mt-1 text-xs text-slate-400">{job.salary}</p> : null}
-    </a>
+
+      <div className="mt-3 flex gap-2">
+        <a
+          href={job.url}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-md border border-cyan-400/30 px-3 py-1.5 text-xs font-medium text-cyan-200 transition hover:border-cyan-300"
+        >
+          View job
+        </a>
+        <button
+          type="button"
+          onClick={() => openResumeChecker(job)}
+          className="rounded-md border border-emerald-400/30 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:border-emerald-300"
+        >
+          Check resume fit
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -114,6 +129,25 @@ export default function HomePage() {
   } | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    try {
+      const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (savedToken) setToken(savedToken);
+    } catch {
+      // ignore private browsing / storage errors
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const trimmed = token.trim();
+      if (trimmed) localStorage.setItem(TOKEN_STORAGE_KEY, trimmed);
+      else localStorage.removeItem(TOKEN_STORAGE_KEY);
+    } catch {
+      // ignore private browsing / storage errors
+    }
+  }, [token]);
 
   const keyword = useMemo(() => skills.trim(), [skills]);
 
@@ -152,8 +186,6 @@ export default function HomePage() {
     resetProviderState();
 
     const body = { skills, experienceYears, location, keyword, maxResults, token: trimmedToken };
-    console.log("[job-search] UI stream start", { skills, experienceYears, location, keyword, maxResults });
-    const startedAt = Date.now();
 
     try {
       const response = await fetch("/api/search/stream", {
@@ -169,8 +201,6 @@ export default function HomePage() {
       }
 
       await consumeSearchStream(response, (event) => {
-        console.log("[job-search] UI stream event", event);
-
         switch (event.type) {
           case "init":
             setDebugInfo(event.debug);
@@ -191,21 +221,14 @@ export default function HomePage() {
           case "done":
             setProviderSummary(event.providerSummary);
             setProviderErrors(event.providerErrors);
-            console.log("[job-search] UI stream done", {
-              ms: Date.now() - startedAt,
-              providerSummary: event.providerSummary,
-              providerErrors: event.providerErrors
-            });
             break;
         }
       });
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        console.log("[job-search] UI stream aborted");
         return;
       }
       const message = err instanceof Error ? err.message : "Unknown error";
-      console.error("[job-search] UI stream failed", { ms: Date.now() - startedAt, message, err });
       setError(message);
       setProviderStatus({
         Indeed: "error",
@@ -234,6 +257,16 @@ export default function HomePage() {
           Search Indeed, LinkedIn, Naukri, and other Indian boards (Shine, Foundit). Enter your details,
           then click Search. Results stream in as each source finishes.
         </p>
+        <div className="mb-6">
+          <a
+            href="/resume-checker"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:border-emerald-300 hover:bg-emerald-500/20"
+          >
+            Open Resume Checker
+          </a>
+        </div>
 
         <form onSubmit={onSearch} className="space-y-5">
           <div>
