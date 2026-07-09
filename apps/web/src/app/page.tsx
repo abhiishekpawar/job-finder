@@ -41,6 +41,27 @@ function emptyJobsByProvider(): Record<ProviderName, SearchJob[]> {
   return { Indeed: [], LinkedIn: [], Naukri: [], Others: [] };
 }
 
+function formatPostedDate(value: string | null) {
+  if (!value) return "Not specified";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not specified";
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+}
+
+function toPostedTime(value: string | null) {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function sortJobsByNewest(items: SearchJob[]) {
+  return [...items].sort((a, b) => toPostedTime(b.postedAt) - toPostedTime(a.postedAt));
+}
+
 function JobCard({ job, showSource }: { job: SearchJob; showSource?: boolean }) {
   return (
     <a
@@ -61,6 +82,7 @@ function JobCard({ job, showSource }: { job: SearchJob; showSource?: boolean }) 
       <p className="mt-2 text-xs text-amber-100/90">
         Exp required: {job.experienceRequired ?? "Not specified"}
       </p>
+      <p className="mt-1 text-xs text-slate-400">Posted: {formatPostedDate(job.postedAt)}</p>
       {job.salary ? <p className="mt-1 text-xs text-slate-400">{job.salary}</p> : null}
     </a>
   );
@@ -330,7 +352,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {PROVIDERS.map((name) => {
-            const jobs = jobsByProvider[name];
+            const jobs = sortJobsByNewest(jobsByProvider[name]);
             const status = providerStatus[name];
             const styles = PROVIDER_STYLES[name];
             const statusLabel =
