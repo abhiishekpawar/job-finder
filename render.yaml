@@ -8,10 +8,16 @@ services:
     branch: main
     buildCommand: npm install && npm run build:web
     startCommand: npm run start:web
-    healthCheckPath: /
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: AUTH_USERNAME
+        sync: false
+      - key: AUTH_PASSWORD
+        sync: false
+      - key: AUTH_SECRET
+        sync: false
       - key: APIFY_RUN_TIMEOUT_MS
         value: "60000"
       - key: DEFAULT_RESULTS_PER_SOURCE

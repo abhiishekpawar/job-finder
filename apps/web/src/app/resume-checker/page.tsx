@@ -1,16 +1,18 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { AiProvider, ResumeAnalysisResult } from "@/lib/resumeChecker/types";
+import type { AiProvider, LatexEdit, ResumeAnalysisResult } from "@/lib/resumeChecker/types";
 import {
   AI_PROVIDER_STORAGE_KEY,
   AI_TOKEN_STORAGE_KEY
 } from "@/lib/resumeChecker/types";
+import { aiTokenStorageKey, detectAiProvider, validateAiToken } from "@/lib/resumeChecker/aiAuth";
 import {
   loadResumeCheckerJob,
   resumeContextFromSearchParams
 } from "@/lib/resumeChecker/storage";
+import { LatexLiveEditor } from "@/components/LatexLiveEditor";
 
 function scoreStyles(score: number) {
   if (score >= 75) {
@@ -37,6 +39,23 @@ function scoreStyles(score: number) {
   };
 }
 
+function downloadBase64File(base64: string, fileName: string, mimeType: string) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.rel = "noreferrer";
+  anchor.target = "_blank";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 function ResumeCheckerContent() {
   const searchParams = useSearchParams();
   const [jobTitle, setJobTitle] = useState("");
@@ -54,18 +73,33 @@ function ResumeCheckerContent() {
   const [parsingPdf, setParsingPdf] = useState(false);
   const [loadingDescription, setLoadingDescription] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [improving, setImproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ResumeAnalysisResult | null>(null);
+  const [improvedNote, setImprovedNote] = useState<string | null>(null);
+  const [liveBaseLatex, setLiveBaseLatex] = useState("");
+  const [liveFinalLatex, setLiveFinalLatex] = useState("");
+  const [liveEdits, setLiveEdits] = useState<LatexEdit[]>([]);
+  const [liveActive, setLiveActive] = useState(false);
+  const [downloadReady, setDownloadReady] = useState<{
+    pdfBase64: string;
+    fileName: string;
+    latex: string;
+  } | null>(null);
+  const pendingPdfRef = useRef<{ base64: string; fileName: string; latex: string } | null>(null);
 
   useEffect(() => {
     try {
-      const savedToken = localStorage.getItem(AI_TOKEN_STORAGE_KEY);
-      if (savedToken) setToken(savedToken);
-
       const savedProvider = localStorage.getItem(AI_PROVIDER_STORAGE_KEY);
-      if (savedProvider === "gemini" || savedProvider === "groq") {
-        setAiProvider(savedProvider);
-      }
+      const provider: AiProvider =
+        savedProvider === "gemini" || savedProvider === "groq" ? savedProvider : "gemini";
+      setAiProvider(provider);
+
+      const savedToken =
+        localStorage.getItem(aiTokenStorageKey(provider)) ||
+        localStorage.getItem(AI_TOKEN_STORAGE_KEY) ||
+        "";
+      if (savedToken) setToken(savedToken);
     } catch {
       // ignore private browsing / storage errors
     }
@@ -74,13 +108,35 @@ function ResumeCheckerContent() {
   useEffect(() => {
     try {
       const trimmed = token.trim();
-      if (trimmed) localStorage.setItem(AI_TOKEN_STORAGE_KEY, trimmed);
-      else localStorage.removeItem(AI_TOKEN_STORAGE_KEY);
       localStorage.setItem(AI_PROVIDER_STORAGE_KEY, aiProvider);
+      if (trimmed) {
+        localStorage.setItem(aiTokenStorageKey(aiProvider), trimmed);
+        localStorage.setItem(AI_TOKEN_STORAGE_KEY, trimmed);
+      } else {
+        localStorage.removeItem(aiTokenStorageKey(aiProvider));
+      }
     } catch {
       // ignore private browsing / storage errors
     }
   }, [token, aiProvider]);
+
+  function onProviderChange(nextProvider: AiProvider) {
+    setAiProvider(nextProvider);
+    try {
+      const saved = localStorage.getItem(aiTokenStorageKey(nextProvider)) || "";
+      setToken(saved);
+    } catch {
+      setToken("");
+    }
+  }
+
+  function onTokenChange(value: string) {
+    setToken(value);
+    const detected = detectAiProvider(value);
+    if (detected && detected !== aiProvider) {
+      setAiProvider(detected);
+    }
+  }
 
   useEffect(() => {
     const prefill = searchParams.get("prefill") === "1";
@@ -165,14 +221,114 @@ function ResumeCheckerContent() {
     }
   }
 
+  async function onInsertMissingKeywords() {
+    if (!result) return;
+
+    const trimmedToken = token.trim();
+    const tokenError = validateAiToken(aiProvider, trimmedToken);
+    if (tokenError) {
+      setError(tokenError);
+      return;
+    }
+
+    if (!result.missingSkills.length) {
+      setError("No missing skills to insert.");
+      return;
+    }
+
+    setError(null);
+    setImprovedNote(null);
+    setImproving(true);
+    setLiveActive(false);
+    setDownloadReady(null);
+    pendingPdfRef.current = null;
+
+    try {
+      const response = await fetch("/api/resume-checker/improve", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          token: trimmedToken,
+          aiProvider,
+          jobTitle,
+          jobDescription,
+          missingSkills: result.missingSkills,
+          suggestions: result.suggestions
+        })
+      });
+
+      const data = (await response.json()) as {
+        baseLatex?: string;
+        pdfBase64?: string;
+        latex?: string;
+        edits?: LatexEdit[];
+        fileName?: string;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Failed to update resume");
+      }
+
+      if (!data.pdfBase64 || !data.latex || !data.baseLatex || !data.edits?.length) {
+        throw new Error("Resume update did not return editable LaTeX changes");
+      }
+
+      setLiveBaseLatex(data.baseLatex);
+      setLiveFinalLatex(data.latex);
+      setLiveEdits(data.edits);
+      setLiveActive(true);
+      pendingPdfRef.current = {
+        base64: data.pdfBase64,
+        fileName: data.fileName ?? "Abhishek_Pawar_Resume_Updated.pdf",
+        latex: data.latex
+      };
+      setImprovedNote("Watch the live editor — skills are being inserted into your LaTeX...");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update resume";
+      setError(message);
+      setImproving(false);
+    }
+  }
+
+  const onLiveAnimationDone = useCallback(() => {
+    const current = pendingPdfRef.current;
+    setImproving(false);
+    setLiveActive(false);
+
+    if (!current) return;
+
+    setDownloadReady({
+      pdfBase64: current.base64,
+      fileName: current.fileName,
+      latex: current.latex
+    });
+    setImprovedNote("Edits applied. Use the download buttons below to save your updated resume.");
+  }, []);
+
+  function onDownloadUpdatedPdf() {
+    if (!downloadReady) return;
+    downloadBase64File(downloadReady.pdfBase64, downloadReady.fileName, "application/pdf");
+  }
+
+  function onDownloadUpdatedLatex() {
+    if (!downloadReady) return;
+    downloadBase64File(
+      btoa(unescape(encodeURIComponent(downloadReady.latex))),
+      "Abhishek_Pawar_Resume_Updated.tex",
+      "application/x-tex"
+    );
+  }
+
   async function onAnalyze(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setResult(null);
 
     const trimmedToken = token.trim();
-    if (!trimmedToken) {
-      setError("Enter your token in the token field.");
+    const tokenError = validateAiToken(aiProvider, trimmedToken);
+    if (tokenError) {
+      setError(tokenError);
       return;
     }
 
@@ -227,18 +383,24 @@ function ResumeCheckerContent() {
           <div className="grid gap-5 md:grid-cols-[1fr_180px]">
             <div>
               <label className="mb-2 block text-sm text-slate-300" htmlFor="token">
-                token
+                {aiProvider === "groq" ? "Groq API key" : "Gemini API key"}
               </label>
               <input
                 id="token"
                 name="token"
                 type="password"
                 value={token}
-                onChange={(event) => setToken(event.target.value)}
+                onChange={(event) => onTokenChange(event.target.value)}
                 autoComplete="off"
                 required
+                placeholder={aiProvider === "groq" ? "gsk_..." : "AIza..."}
                 className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none"
               />
+              <p className="mt-2 text-xs text-slate-500">
+                {aiProvider === "groq"
+                  ? "Use a Groq key from console.groq.com (starts with gsk_)."
+                  : "Use a Gemini key from aistudio.google.com (usually starts with AIza)."}
+              </p>
             </div>
             <div>
               <label className="mb-2 block text-sm text-slate-300" htmlFor="aiProvider">
@@ -247,7 +409,7 @@ function ResumeCheckerContent() {
               <select
                 id="aiProvider"
                 value={aiProvider}
-                onChange={(event) => setAiProvider(event.target.value as AiProvider)}
+                onChange={(event) => onProviderChange(event.target.value as AiProvider)}
                 className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none"
               >
                 <option value="gemini">Gemini (free)</option>
@@ -402,6 +564,36 @@ function ResumeCheckerContent() {
                 </div>
               </div>
             ) : null}
+
+            <button
+              type="button"
+              onClick={onInsertMissingKeywords}
+              disabled={improving || analyzing || !result.missingSkills.length}
+              className="w-full rounded-xl bg-cyan-400 px-4 py-3 font-medium text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {improving ? "Inserting keywords into LaTeX..." : "Insert missing keywords"}
+            </button>
+
+            {downloadReady ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={onDownloadUpdatedPdf}
+                  className="rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-sm font-medium text-emerald-200 transition hover:border-emerald-300 hover:bg-emerald-500/25"
+                >
+                  Download updated resume (PDF)
+                </button>
+                <button
+                  type="button"
+                  onClick={onDownloadUpdatedLatex}
+                  className="rounded-xl border border-white/15 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-cyan-400/40"
+                >
+                  Download LaTeX (.tex)
+                </button>
+              </div>
+            ) : null}
+
+            {improvedNote ? <p className="text-sm text-emerald-300">{improvedNote}</p> : null}
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-slate-400">
@@ -410,6 +602,18 @@ function ResumeCheckerContent() {
           </div>
         )}
       </div>
+
+      {liveFinalLatex || liveBaseLatex ? (
+        <div className="lg:col-span-2">
+          <LatexLiveEditor
+            baseLatex={liveBaseLatex}
+            finalLatex={liveFinalLatex}
+            edits={liveEdits}
+            active={liveActive}
+            onAnimationDone={onLiveAnimationDone}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

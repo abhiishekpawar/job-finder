@@ -1,0 +1,193 @@
+/** Base ATS resume LaTeX (from resumeCode.tex). */
+export const RESUME_LATEX_TEMPLATE = String.raw`% -----------------------------
+% Resume in Latex - One Page | ATS-Friendly | Abhishek Pawar
+% -----------------------------
+
+\documentclass[letterpaper,10pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tabularx}
+\usepackage{fontawesome5}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{multicol}
+\input{glyphtounicode}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Margins
+\addtolength{\oddsidemargin}{-0.65in}
+\addtolength{\evensidemargin}{-0.55in}
+\addtolength{\textwidth}{1.3in}
+\addtolength{\topmargin}{-0.85in}
+\addtolength{\textheight}{1.7in}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+\pdfgentounicode=1
+
+% Section titles
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\normalsize\bfseries
+}{}{0em}{}[\color{black}\titlerule \vspace{-4pt}]
+
+\newcommand{\resumeItem}[1]{%
+  \item\small{#1}%
+}
+
+\newcommand{\resumeSubheading}[4]{%
+  \vspace{3pt}%
+  \begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}}r@{}}
+    \textbf{\small #1} & \textbf{\small #2} \\
+    \textit{\small #3} & \textit{\small #4} \\
+  \end{tabular*}%
+  \vspace{-4pt}%
+}
+
+% Grouped company heading (for KMCCorp)
+\newcommand{\resumeCompanyHeading}[2]{%
+  \vspace{3pt}%
+  \begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}}r@{}}
+    \textbf{\small #1} & \textbf{\small #2} \\
+  \end{tabular*}%
+  \vspace{-2pt}%
+}
+
+\newcommand{\resumeRoleEntry}[2]{%
+  \vspace{1pt}%
+  \begin{tabular*}{\textwidth}{@{\hspace{6pt}}l@{\extracolsep{\fill}}r@{}}
+    \textit{\small #1} & \textit{\small #2} \\
+  \end{tabular*}%
+  \vspace{-4pt}%
+}
+
+\newcommand{\resumeItemListStart}{%
+  \begin{itemize}[label=\textbullet, leftmargin=12pt, topsep=2pt, itemsep=0pt, parsep=0pt]%
+}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{0pt}}
+
+% =====================
+\begin{document}
+
+% -------- Header --------
+\begin{center}
+    {\LARGE \scshape Abhishek Pawar} \\ \vspace{2pt}
+    \small
+    \faPhone\ +91\,8792097774 \quad
+    \href{mailto:abhipawar213@gmail.com}{\faEnvelope\ abhiiishekpawar@gmail.com} \quad
+    \href{https://www.linkedin.com/in/abhishekpawar74/}{\faLinkedin\ linkedin.com/in/abhishekpawar74} \quad
+    \href{https://github.com/abhiishekpawar}{\faGithub\ github.com/abhiishekpawar}
+\end{center}
+
+\vspace{-3pt}
+
+% -------- Summary --------
+\section{Summary}
+\vspace{2pt}
+{\small Java backend engineer specializing in high-throughput event streaming — built and operated Kafka/Flink pipelines and Spring Boot microservices at KMCCorp, now owning real-time event-driven workflows at LTIMindtree. Focused on system reliability, latency optimization, and taking services from design to production.}
+\vspace{-2pt}
+
+% -------- Technical Skills --------
+\section{Technical Skills}
+\vspace{2pt}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{3.1cm} X@{}}
+Core Java         & Java 8+, Collections, Streams, Concurrency, Multithreading \\[1pt]
+Backend           & Spring Boot, Spring WebFlux, Spring Security, Microservices, REST APIs, JWT \\[1pt]
+Data \& Streaming & confluent cloud Kafka, confluent cloud Flink (SQL/Table API), Apache Airflow, Event-Driven Architecture \\[1pt]
+Databases         & MySQL, PostgreSQL, Snowflake, Redis \\[1pt]
+Cloud \& Infra    & AWS (EC2, S3, IAM), Kubernetes, Docker, Jenkins, Git, Maven, CI/CD \\[1pt]
+Observability     & Splunk, Dynatrace \\
+\end{tabularx}
+\vspace{-2pt}
+
+% -------- Education --------
+\section{Education}
+\vspace{3pt}
+\begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}}r@{}}
+  \textbf{Poojya Doddappa Appa (PDA) College of Engineering, Kalaburagi} & \textbf{2018 -- 2022} \\
+  \textit{\small Bachelor of Engineering in Computer Science \& Engineering} & \textit{\small CGPA: 8.4 / 10} \\
+\end{tabular*}
+\vspace{-2pt}
+
+% -------- Work Experience --------
+\section{Work Experience}
+
+\resumeSubheading{LTIMindtree}{Feb 2026 -- Present}{Software Engineer}{Hyderabad, India}
+\resumeItemListStart
+  \resumeItem{Own Java-based real-time backend services processing event-driven workflows using confluent cloud Kafka and confluent cloud Flink.}
+  \resumeItem{Design stream processing jobs with exactly-once semantics, managing state recovery, reprocessing, and failure scenarios.}
+  \resumeItem{Improved end-to-end processing latency by 30--40\% through Flink state tuning, checkpoint optimization, and Kafka consumer configuration.}
+\resumeItemListEnd
+
+% KMCCorp grouped under one company header
+\resumeCompanyHeading{KMCCorp India Private Limited \textnormal{\textit{\small --- Promoted: Intern $\to$ Associate SE $\to$ SE}}}{Aug 2023 -- Jan 2026}
+
+\resumeRoleEntry{Software Engineer}{Aug 2025 -- Jan 2026}
+\resumeItemListStart
+  \resumeItem{Built Spring Boot microservices for asynchronous processing of high-volume business events.}
+  \resumeItem{Introduced Kafka-based decoupling to eliminate synchronous bottlenecks, improving throughput and system reliability.}
+  \resumeItem{Resolved consumer lag and backpressure issues; led production readiness including performance and failure testing.}
+\resumeItemListEnd
+
+\resumeRoleEntry{Associate Software Engineer}{Nov 2023 -- Aug 2025}
+\resumeItemListStart
+  \resumeItem{Developed Java backend services and owned features end-to-end from design through production deployment.}
+  \resumeItem{Integrated confluent cloud Kafka with Airflow DAGs to orchestrate ingestion pipelines, retries, and failure handling.}
+  \resumeItem{Reduced recurring production issues by improving transactional boundaries and optimizing SQL execution plans.}
+\resumeItemListEnd
+
+\resumeRoleEntry{Software Developer Intern}{Aug 2023 -- Nov 2023}
+\resumeItemListStart
+  \resumeItem{Contributed to backend feature development and bug fixes; wrote unit tests to improve deployment stability.}
+\resumeItemListEnd
+
+% -------- Projects --------
+\section{Projects}
+
+\resumeSubheading
+  {CacheCommerce -- High-Performance Java Backend \textnormal{|} \href{https://github.com/abhiishekpawar/cache-demo}{\small\faGithub}}
+  {}
+  {Java, Spring Boot, Redis, MySQL}{Personal Project} \vspace{1pt}
+\resumeItemListStart
+  \resumeItem{Built a Java e-commerce backend for low-latency, read-heavy workloads; introduced Redis caching, cutting P95 latency from \textasciitilde500ms to \textasciitilde50ms under concurrent load.}
+  \resumeItem{Made explicit tradeoffs between cache consistency and performance; built end-to-end with focus on concurrency and operational simplicity.}
+\resumeItemListEnd
+
+\resumeSubheading
+  {Real-Time RAG Pipeline \textnormal{|} \href{https://github.com/abhiishekpawar/Real-time-Rag-pipeline}{\small\faGithub}}
+  {}
+  {Kafka, Vector DB, LLM, Semantic Search}{Personal Project} \vspace{1pt}
+\resumeItemListStart
+  \resumeItem{Built an end-to-end real-time RAG pipeline with Kafka-driven document ingestion, vector embedding, and semantic search for context-aware LLM responses.}
+  \resumeItem{Designed streaming ingestion layer to process and index documents in real time, enabling low-latency retrieval for downstream query handling.}
+\resumeItemListEnd
+
+% -------- Certifications --------
+\section{Certifications}
+\vspace{2pt}
+\begin{multicols}{2}
+\begin{itemize}[label=\textbullet, leftmargin=12pt, itemsep=0pt, topsep=0pt]
+  \small
+  \item Confluent Fundamentals for confluent cloud Kafka (2024)
+  \item \href{https://certificates.confluent.io/2dbb1f4c-f079-456f-bc87-80dae55ea5f3}{Data Streaming Engineer Foundations -- Confluent}
+  \item \href{https://certificates.confluent.io/6d33afa4-8112-466a-af3c-b4b41bde87b8}{Data Streaming Engineer: Apache Flink -- Confluent}
+  \item \href{https://www.udemy.com/certificate/UC-cfae3d7e-dd68-4240-995f-4679a4fc5ffe/}{Apache Flink: Real-Time Hands-On -- Udemy}
+  \item \href{https://www.udemy.com/certificate/UC-0e123ee6-3468-47ed-96a4-80c4f3c15f9a/}{Spring Security: Zero to Master -- Udemy}
+  \item \href{https://www.udemy.com/certificate/UC-bc06e57a-388c-44d9-94e0-d57702908417/}{Reactive Microservices: WebFlux/Spring Boot -- Udemy}
+\end{itemize}
+\end{multicols}
+
+\end{document}
+`;

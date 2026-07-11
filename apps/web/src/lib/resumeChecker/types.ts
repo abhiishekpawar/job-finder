@@ -24,4 +24,23 @@ export const AI_PROVIDER_STORAGE_KEY = "job-hunter-ai-provider";
 
 export type AiProvider = "gemini" | "groq";
 
+export type SkillRowKey =
+  | "Core Java"
+  | "Backend"
+  | "Data & Streaming"
+  | "Databases"
+  | "Cloud & Infra"
+  | "Observability"
+  | "Additional";
+
+export type LatexEdit = {
+  id: string;
+  skill: string;
+  row: SkillRowKey;
+  description: string;
+  lineNumber: number;
+  beforeLine: string;
+  afterLine: string;
+};
+
 export const RESUME_JOB_STORAGE_KEY = "resume-checker-job";

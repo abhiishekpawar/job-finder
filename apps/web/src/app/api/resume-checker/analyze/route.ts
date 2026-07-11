@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { AiProvider } from "@/lib/resumeChecker/types";
 import type { ResumeAnalysisResult } from "@/lib/resumeChecker/types";
+import { detectAiProvider, isAuthErrorMessage, normalizeAiToken, validateAiToken } from "@/lib/resumeChecker/aiAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -152,7 +153,7 @@ async function analyzeWithGroq(input: AnalyzeInput, apiKey: string): Promise<Res
 }
 
 function resolveApiKey(requestToken?: string): string | null {
-  const fromRequest = requestToken?.trim();
+  const fromRequest = requestToken ? normalizeAiToken(requestToken) : "";
   if (fromRequest) return fromRequest;
 
   return (
@@ -165,19 +166,21 @@ function resolveApiKey(requestToken?: string): string | null {
 
 function resolveProvider(input: AnalyzeInput, apiKey: string): AiProvider {
   if (input.aiProvider) return input.aiProvider;
-  if (process.env.GEMINI_API_KEY?.trim() === apiKey) return "gemini";
-  if (process.env.GROQ_API_KEY?.trim() === apiKey) return "groq";
-  if (apiKey.startsWith("gsk_")) return "groq";
-  return "gemini";
+  return detectAiProvider(apiKey) ?? "gemini";
 }
 
 async function analyzeWithAi(input: AnalyzeInput): Promise<ResumeAnalysisResult> {
   const apiKey = resolveApiKey(input.token);
   if (!apiKey) {
-    return fallbackAnalysis(input.jobTitle, input.requiredYears, input.resumeText);
+    throw new Error("Enter your token in the token field.");
   }
 
   const provider = resolveProvider(input, apiKey);
+  const validationError = validateAiToken(provider, apiKey);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
   if (provider === "groq") {
     return analyzeWithGroq(input, apiKey);
   }
@@ -189,18 +192,19 @@ export async function POST(request: Request) {
     const input = analyzeSchema.parse(await request.json());
 
     if (!resolveApiKey(input.token)) {
-      return NextResponse.json(
-        { error: "Enter your token in the token field." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Enter your token in the token field." }, { status: 400 });
     }
 
     try {
       const result = await analyzeWithAi(input);
       return NextResponse.json(result);
     } catch (aiError) {
-      const fallback = fallbackAnalysis(input.jobTitle, input.requiredYears, input.resumeText);
       const reason = aiError instanceof Error ? aiError.message : "AI service unavailable";
+      if (isAuthErrorMessage(reason) || reason.includes("Groq keys start") || reason.includes("looks like a Groq")) {
+        return NextResponse.json({ error: reason }, { status: 401 });
+      }
+
+      const fallback = fallbackAnalysis(input.jobTitle, input.requiredYears, input.resumeText);
       return NextResponse.json({
         ...fallback,
         summary: `${fallback.summary} (${reason})`
