@@ -18,6 +18,8 @@ services:
         sync: false
       - key: AUTH_SECRET
         sync: false
+      - key: LATEX_FORCE_HTTP
+        value: "1"
       - key: APIFY_RUN_TIMEOUT_MS
         value: "60000"
       - key: DEFAULT_RESULTS_PER_SOURCE
